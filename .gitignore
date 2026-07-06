@@ -1,0 +1,15 @@
+# OS X
+.DS_Store
+
+# Xcode
+build/
+DerivedData/
+*.xcuserstate
+project.xcworkspace/
+xcuserdata/
+
+# Build artifacts
+macOS-Host.app/
+*.ipa
+*.app
+*.dSYM
