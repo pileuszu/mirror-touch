@@ -46,12 +46,12 @@ class VideoEncoder {
         
         // Configure low-latency properties
         VTSessionSetProperty(session, key: kVTCompressionPropertyKey_RealTime, value: kCFBooleanTrue)
-        VTSessionSetProperty(session, key: kVTCompressionPropertyKey_ProfileLevel, value: kVTProfileLevel_H264_Baseline_AutoLevel)
+        VTSessionSetProperty(session, key: kVTCompressionPropertyKey_ProfileLevel, value: kVTProfileLevel_H264_High_AutoLevel)
         VTSessionSetProperty(session, key: kVTCompressionPropertyKey_MaxKeyFrameInterval, value: 30 as CFNumber) // Keyframe every 30 frames (0.5s at 60fps)
         VTSessionSetProperty(session, key: kVTCompressionPropertyKey_AllowFrameReordering, value: kCFBooleanFalse) // Disable B-frames for zero latency
         
-        // Target bit rate (e.g. 4 Mbps)
-        let bitRate = 4_000_000 as CFNumber
+        // Target bit rate of 15 Mbps for crystal clear retina streaming over local Wi-Fi
+        let bitRate = 15_000_000 as CFNumber
         VTSessionSetProperty(session, key: kVTCompressionPropertyKey_AverageBitRate, value: bitRate)
         
         // Clean up session initialization

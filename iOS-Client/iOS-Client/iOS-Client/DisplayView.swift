@@ -19,6 +19,7 @@ class VideoPreviewView: UIView {
     override func layoutSubviews() {
         super.layoutSubviews()
         displayLayer.frame = self.bounds
+        displayLayer.contentsScale = self.traitCollection.displayScale
     }
 }
 
