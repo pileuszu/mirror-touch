@@ -189,4 +189,12 @@ class VideoDecoder {
             logger.error("Failed to create CMSampleBuffer: \(status)")
         }
     }
+    
+    func reset() {
+        sps = nil
+        pps = nil
+        formatDescription = nil
+        frameCount = 0
+        logger.info("VideoDecoder state reset")
+    }
 }

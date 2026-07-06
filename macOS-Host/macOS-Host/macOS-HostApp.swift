@@ -2,6 +2,7 @@ import SwiftUI
 import CoreGraphics
 import CoreMedia
 import Combine
+import OSLog
 
 @main
 struct MacOSHostApp: App {
@@ -26,6 +27,7 @@ class HostController: ObservableObject, DisplayServerDelegate, ScreenCapturerDel
     private let server = DisplayServer()
     private let capturer = ScreenCapturer()
     private let encoder = VideoEncoder()
+    private let logger = Logger(subsystem: "com.wifidisplay.host", category: "HostController")
     
     struct Resolution: Hashable {
         let width: Int
@@ -111,9 +113,21 @@ class HostController: ObservableObject, DisplayServerDelegate, ScreenCapturerDel
     
     private func startStreaming() {
         guard isClientConnected, let displayID = wrapper?.displayID else { return }
-        let res = selectedResolution
-        encoder.startSession(width: Int32(res.width), height: Int32(res.height))
-        capturer.startCapture(displayID: displayID, width: res.width, height: res.height)
+        
+        var actualWidth = Int(CGDisplayPixelsWide(displayID))
+        var actualHeight = Int(CGDisplayPixelsHigh(displayID))
+        
+        // Fallback to selected resolution if querying fails
+        if actualWidth == 0 || actualHeight == 0 {
+            let res = selectedResolution
+            actualWidth = res.width
+            actualHeight = res.height
+        }
+        
+        logger.info("Starting stream with actual display dimensions: \(actualWidth)x\(actualHeight)")
+        
+        encoder.startSession(width: Int32(actualWidth), height: Int32(actualHeight))
+        capturer.startCapture(displayID: displayID, width: actualWidth, height: actualHeight)
     }
     
     private func stopStreaming() {

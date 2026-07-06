@@ -19,12 +19,14 @@ class ClientController: NSObject, ObservableObject, DisplayClientDelegate, Video
     }
     
     func didConnect() {
+        decoder.reset()
         DispatchQueue.main.async {
             self.displayLayer.sampleBufferRenderer.flush()
         }
     }
     
     func didDisconnect() {
+        decoder.reset()
         DispatchQueue.main.async {
             self.displayLayer.sampleBufferRenderer.flush()
         }
