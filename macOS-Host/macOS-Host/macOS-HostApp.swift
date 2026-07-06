@@ -50,8 +50,10 @@ class HostController: ObservableObject, DisplayServerDelegate, ScreenCapturerDel
         Resolution(width: 1920, height: 1080, ppi: 220, hiDPI: false, name: "Standard 1080p"),
         
         // 4:3 Game Mode Options
-        Resolution(width: 1024, height: 768, ppi: 150, hiDPI: false, name: "Game Mode (1024x768 - 4:3)"),
-        Resolution(width: 2048, height: 1536, ppi: 264, hiDPI: true, name: "Game Mode Retina (2048x1536 - 4:3)")
+        Resolution(width: 1024, height: 768, ppi: 150, hiDPI: false, name: "Game Mode Fullscreen (1024x768 - 4:3)"),
+        Resolution(width: 1024, height: 840, ppi: 150, hiDPI: false, name: "Game Mode Windowed (1024x840 - Height Buffer)"),
+        Resolution(width: 2048, height: 1536, ppi: 264, hiDPI: true, name: "Game Mode Retina Full (2048x1536 - 4:3)"),
+        Resolution(width: 2048, height: 1680, ppi: 264, hiDPI: true, name: "Game Mode Retina Windowed (2048x1680)")
     ]
     
     init() {
