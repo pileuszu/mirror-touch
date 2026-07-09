@@ -21,7 +21,6 @@ class HostController: ObservableObject, DisplayServerDelegate, ScreenCapturerDel
     @Published var isServerRunning = false
     @Published var isDisplayCreated = false
     @Published var isClientConnected = false
-    @Published var selectedResolution = Resolution(width: 585, height: 1266, ppi: 230, hiDPI: true, name: "iPhone 13/14 Pro (Portrait - Optimized)")
     
     private var wrapper: VirtualDisplayWrapper?
     private let server = DisplayServer()
@@ -31,35 +30,6 @@ class HostController: ObservableObject, DisplayServerDelegate, ScreenCapturerDel
     
     private var currentStreamWidth = 0
     private var currentStreamHeight = 0
-    
-    struct Resolution: Hashable {
-        let width: Int
-        let height: Int
-        let ppi: Int
-        let hiDPI: Bool
-        let name: String
-    }
-    
-    let resolutions = [
-        // Optimized scaled-down options (reduces pixel count 4x for ultra-low streaming latency)
-        Resolution(width: 585, height: 1266, ppi: 230, hiDPI: true, name: "iPhone 13/14 Pro (Portrait - Optimized)"),
-        Resolution(width: 1266, height: 585, ppi: 230, hiDPI: true, name: "iPhone 13/14 Pro (Landscape - Optimized)"),
-        Resolution(width: 645, height: 1398, ppi: 230, hiDPI: true, name: "iPhone 14/15 Pro Max (Portrait - Optimized)"),
-        Resolution(width: 1398, height: 645, ppi: 230, hiDPI: true, name: "iPhone 14/15 Pro Max (Landscape - Optimized)"),
-        Resolution(width: 414, height: 896, ppi: 163, hiDPI: true, name: "iPhone 11 / XR (Portrait - Optimized)"),
-        Resolution(width: 896, height: 414, ppi: 163, hiDPI: true, name: "iPhone 11 / XR (Landscape - Optimized)"),
-        
-        // High Quality Native Options
-        Resolution(width: 1170, height: 2532, ppi: 460, hiDPI: true, name: "iPhone 13/14 Pro (Portrait - Native)"),
-        Resolution(width: 2532, height: 1170, ppi: 460, hiDPI: true, name: "iPhone 13/14 Pro (Landscape - Native)"),
-        Resolution(width: 1920, height: 1080, ppi: 220, hiDPI: false, name: "Standard 1080p"),
-        
-        // 4:3 Game Mode Options
-        Resolution(width: 1024, height: 768, ppi: 150, hiDPI: false, name: "Game Mode Fullscreen (1024x768 - 4:3)"),
-        Resolution(width: 1024, height: 840, ppi: 150, hiDPI: false, name: "Game Mode Windowed (1024x840 - Height Buffer)"),
-        Resolution(width: 2048, height: 1536, ppi: 264, hiDPI: true, name: "Game Mode Retina Full (2048x1536 - 4:3)"),
-        Resolution(width: 2048, height: 1680, ppi: 264, hiDPI: true, name: "Game Mode Retina Windowed (2048x1680)")
-    ]
     
     init() {
         server.delegate = self
@@ -96,16 +66,20 @@ class HostController: ObservableObject, DisplayServerDelegate, ScreenCapturerDel
     func createVirtualDisplay() {
         guard wrapper == nil else { return }
         
-        let res = selectedResolution
-        let wrapper = VirtualDisplayWrapper(name: "WiFi-Extension", width: Int32(res.width), height: Int32(res.height), ppi: Int32(res.ppi), hiDPI: res.hiDPI)
+        // Initialize the virtual display at 1920x1080.
+        // Once created, the user can choose any resolution (including game and iPhone specific ratios)
+        // directly from macOS System Settings > Displays, and the stream will dynamically adapt.
+        let defaultWidth = 1920
+        let defaultHeight = 1080
+        let defaultPPI = 220
+        let defaultHiDPI = false
+        
+        let wrapper = VirtualDisplayWrapper(name: "WiFi-Extension", width: Int32(defaultWidth), height: Int32(defaultHeight), ppi: Int32(defaultPPI), hiDPI: defaultHiDPI)
         
         if let wrapper = wrapper {
             self.wrapper = wrapper
             self.isDisplayCreated = true
-            
             server.virtualDisplayID = wrapper.displayID
-            server.virtualDisplayWidth = CGFloat(res.width)
-            server.virtualDisplayHeight = CGFloat(res.height)
             
             if isClientConnected {
                 startStreaming()
@@ -127,11 +101,10 @@ class HostController: ObservableObject, DisplayServerDelegate, ScreenCapturerDel
         var actualWidth = Int(CGDisplayPixelsWide(displayID))
         var actualHeight = Int(CGDisplayPixelsHigh(displayID))
         
-        // Fallback to selected resolution if querying fails
+        // Fallback if querying fails
         if actualWidth == 0 || actualHeight == 0 {
-            let res = selectedResolution
-            actualWidth = res.width
-            actualHeight = res.height
+            actualWidth = 1920
+            actualHeight = 1080
         }
         
         logger.info("Starting stream with actual display dimensions: \(actualWidth)x\(actualHeight)")
@@ -234,22 +207,13 @@ struct ContentView: View {
             GroupBox(label: Text("Virtual Display Settings")) {
                 VStack(spacing: 10) {
                     HStack {
-                        Text("Target Client:")
-                        Spacer()
-                        Picker("", selection: $controller.selectedResolution) {
-                            ForEach(controller.resolutions, id: \.self) { res in
-                                Text("\(res.name) (\(res.width)x\(res.height))").tag(res)
-                            }
-                        }
-                        .labelsHidden()
-                        .disabled(controller.isDisplayCreated)
-                    }
-                    
-                    HStack {
                         VStack(alignment: .leading) {
                             Text("Virtual Display: \(controller.isDisplayCreated ? "CREATED" : "NONE")")
                                 .bold()
                                 .foregroundColor(controller.isDisplayCreated ? .blue : .gray)
+                            Text("Configure resolution in macOS System Settings > Displays")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
                         }
                         Spacer()
                         Button(action: {
