@@ -29,6 +29,9 @@ class HostController: ObservableObject, DisplayServerDelegate, ScreenCapturerDel
     private let encoder = VideoEncoder()
     private let logger = Logger(subsystem: "com.wifidisplay.host", category: "HostController")
     
+    private var currentStreamWidth = 0
+    private var currentStreamHeight = 0
+    
     struct Resolution: Hashable {
         let width: Int
         let height: Int
@@ -62,6 +65,13 @@ class HostController: ObservableObject, DisplayServerDelegate, ScreenCapturerDel
         server.delegate = self
         capturer.delegate = self
         encoder.delegate = self
+        
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(screenParametersChanged),
+            name: NSApplication.didChangeScreenParametersNotification,
+            object: nil
+        )
     }
     
     func toggleServer() {
@@ -126,6 +136,9 @@ class HostController: ObservableObject, DisplayServerDelegate, ScreenCapturerDel
         
         logger.info("Starting stream with actual display dimensions: \(actualWidth)x\(actualHeight)")
         
+        self.currentStreamWidth = actualWidth
+        self.currentStreamHeight = actualHeight
+        
         encoder.startSession(width: Int32(actualWidth), height: Int32(actualHeight))
         capturer.startCapture(displayID: displayID, width: actualWidth, height: actualHeight)
     }
@@ -133,6 +146,31 @@ class HostController: ObservableObject, DisplayServerDelegate, ScreenCapturerDel
     private func stopStreaming() {
         capturer.stopCapture()
         encoder.stopSession()
+        self.currentStreamWidth = 0
+        self.currentStreamHeight = 0
+    }
+    
+    @objc private func screenParametersChanged() {
+        guard isClientConnected, let displayID = wrapper?.displayID else { return }
+        
+        let actualWidth = Int(CGDisplayPixelsWide(displayID))
+        let actualHeight = Int(CGDisplayPixelsHigh(displayID))
+        
+        if actualWidth == 0 || actualHeight == 0 { return }
+        
+        if actualWidth != currentStreamWidth || actualHeight != currentStreamHeight {
+            logger.info("Display resolution changed dynamically from \(self.currentStreamWidth)x\(self.currentStreamHeight) to \(actualWidth)x\(actualHeight). Re-initializing stream...")
+            
+            // Re-initialize streaming at new resolution
+            capturer.stopCapture()
+            encoder.stopSession()
+            
+            self.currentStreamWidth = actualWidth
+            self.currentStreamHeight = actualHeight
+            
+            encoder.startSession(width: Int32(actualWidth), height: Int32(actualHeight))
+            capturer.startCapture(displayID: displayID, width: actualWidth, height: actualHeight)
+        }
     }
     
     // MARK: - DisplayServerDelegate
