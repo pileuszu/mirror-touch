@@ -103,6 +103,11 @@ struct HostSelectionView: View {
     @State private var ipAddress = "172.20.10.2" // Default Mac IP over USB tethering
     @State private var portString = "8080"
     
+    private var isInputValid: Bool {
+        let cleanIP = ipAddress.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !cleanIP.isEmpty && UInt16(portString) != nil
+    }
+    
     var body: some View {
         NavigationView {
             VStack {
@@ -113,13 +118,16 @@ struct HostSelectionView: View {
                 .pickerStyle(SegmentedPickerStyle())
                 .padding()
                 
+                // Show status message here so it's always visible to the user
+                Text(client.statusMessage)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .bold()
+                    .padding(.horizontal)
+                    .padding(.bottom, 5)
+                
                 if connectionMode == 0 {
                     // Auto-Discovery Mode (Wi-Fi & USB Automatic Broadcast)
-                    Text(client.statusMessage)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .padding(.horizontal)
-                    
                     List(client.discoveredHosts) { host in
                         Button(action: {
                             client.connect(to: host.endpoint)
@@ -167,8 +175,9 @@ struct HostSelectionView: View {
                         
                         Section {
                             Button(action: {
+                                let cleanIP = ipAddress.trimmingCharacters(in: .whitespacesAndNewlines)
                                 if let port = UInt16(portString) {
-                                    client.connectToHost(ip: ipAddress, port: port)
+                                    client.connectToHost(ip: cleanIP, port: port)
                                 }
                             }) {
                                 HStack {
@@ -179,7 +188,8 @@ struct HostSelectionView: View {
                                 }
                             }
                             .foregroundColor(.white)
-                            .listRowBackground(Color.blue)
+                            .listRowBackground(isInputValid ? Color.blue : Color.gray)
+                            .disabled(!isInputValid)
                         }
                         
                         Section(footer: Text("💡 Connection Tip:\nIf you are using a USB cable connection, turn on 'Personal Hotspot' (개인 핫스팟) on your iPhone and connect the USB cable. Your Mac will automatically connect over the high-speed USB interface and typically reside at IP address '172.20.10.2'.")) {

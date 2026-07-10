@@ -94,6 +94,17 @@ class DisplayClient: ObservableObject {
     func connect(to endpoint: NWEndpoint) {
         disconnect()
         
+        let endpointDesc: String
+        if case .hostPort(let host, let port) = endpoint {
+            endpointDesc = "\(host):\(port)"
+        } else {
+            endpointDesc = String(describing: endpoint)
+        }
+        
+        DispatchQueue.main.async {
+            self.statusMessage = "Connecting to \(endpointDesc)..."
+        }
+        
         let parameters = NWParameters.tcp
         let connection = NWConnection(to: endpoint, using: parameters)
         
