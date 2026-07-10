@@ -13,6 +13,7 @@ struct DiscoveredHost: Identifiable, Hashable {
     let id: String
     let endpoint: NWEndpoint
     let name: String
+    let connectionType: String // "Wi-Fi" or "USB / Cable"
 }
 
 class DisplayClient: ObservableObject {
@@ -56,7 +57,18 @@ class DisplayClient: ObservableObject {
                 } else {
                     name = String(describing: result.endpoint)
                 }
-                return DiscoveredHost(id: String(describing: result.endpoint), endpoint: result.endpoint, name: name)
+                
+                // Determine connection type based on network interface media type
+                var connectionType = "Wi-Fi"
+                if result.interfaces.contains(where: { $0.type == .wiredEthernet }) {
+                    connectionType = "USB / Cable"
+                } else if result.interfaces.contains(where: { $0.type == .wifi }) {
+                    connectionType = "Wi-Fi"
+                } else {
+                    connectionType = "Local"
+                }
+                
+                return DiscoveredHost(id: String(describing: result.endpoint), endpoint: result.endpoint, name: name, connectionType: connectionType)
             }
             DispatchQueue.main.async {
                 self?.discoveredHosts = hosts
@@ -70,6 +82,13 @@ class DisplayClient: ObservableObject {
     func stopBrowsing() {
         browser?.cancel()
         browser = nil
+    }
+    
+    func connectToHost(ip: String, port: UInt16) {
+        if let portVal = NWEndpoint.Port(rawValue: port) {
+            let endpoint = NWEndpoint.hostPort(host: NWEndpoint.Host(ip), port: portVal)
+            connect(to: endpoint)
+        }
     }
     
     func connect(to endpoint: NWEndpoint) {
