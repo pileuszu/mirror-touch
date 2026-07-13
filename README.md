@@ -1,48 +1,61 @@
-# MirrorTouch (미러터치) 📱🖥️
+# MirrorTouch 📱🖥️
 
-MirrorTouch is a high-performance, real-time wireless screen-sharing and remote-touch control system that extends your macOS desktop to an iOS device (iPhone/iPad) over Wi-Fi.
-
-맥북 화면을 와이파이를 통해 아이폰 보조 모니터로 확장하고, 아이폰의 터치 제스처로 맥북을 원격 제어할 수 있는 고성능 무선 디스플레이 공유 솔루션입니다.
+MirrorTouch is a high-performance, real-time screen-sharing and remote-touch control system that extends your macOS desktop to an iOS device (iPhone/iPad). It allows you to use your iPhone as a secondary touch-sensitive monitor for your Mac over both wireless Wi-Fi and high-speed USB cable connections.
 
 ---
 
-## 🌟 Key Features (주요 기능)
+## 🌟 Key Features
 
-- **Wi-Fi Extended Display**: Create a virtual secondary display on macOS and stream it to iOS with ultra-low latency. (와이파이를 통해 가상 보조 디스플레이를 생성하고 저지연 실시간 비디오 스트리밍을 제공합니다.)
-- **Aspect-Ratio Fitting (Game Mode)**: Automatically scales the display to fit standard resolutions (including 4:3 Game Mode `1024x768` and 19.5:9 optimized mobile resolutions) with clean, automatic letterboxing/pillarboxes. (4:3 게임 모드 `1024x768` 및 19.5:9 모바일 비율 등 다양한 가상 화면비를 왜곡 없이 중앙 정렬 및 핏합니다.)
-- **Edge Cutoff Prevention**: Added safety margins (16pt left/right, 8pt top/bottom) to prevent UI elements from being cut off by the iPhone notch, dynamic island, or rounded corners. (아이폰 노치나 라운드 모서리에 화면이 잘리는 현상을 막기 위해 자동 안전 레터박스를 배치했습니다.)
-- **Monotonic Display Timing**: Automatically aligns frame presentation timestamps (PTS) and flags `displayImmediately` to ensure stutter-free real-time rendering. (디코드 프레임의 실시간 출력을 위해 타임스탬프 동기화 및 즉각 출력 구조를 설계하여 렉 없는 렌더링을 제공합니다.)
-- **Zero-Latency Touch Input**: Map touch gestures on the iOS device back to the macOS host to control the system. (아이폰의 터치 드래그/클릭 좌표를 1:1 보정 계산하여 맥북 마우스 이벤트로 원격 전달합니다.)
-- **Auto-Discovery (Bonjour)**: Instant host discovery over local network without manual IP entry. (애플 Bonjour 서비스 탐색 기술을 적용해 복잡한 IP 입력 없이 자동으로 컴퓨터를 찾아 연결합니다.)
+- **Dynamic Resolution Tracking**: The virtual display supports a wide variety of standard aspect ratios (4:3, 16:9, 16:10, and iPhone-native 19.5:9). When a game or app changes the screen resolution mid-stream (e.g., entering fullscreen via `Alt+Enter`), the host dynamically adapts, restarts the stream session at the new size, and maintains 1:1 pixel alignment.
+- **Wired (USB) & Wireless (Wi-Fi) Modes**: Connect wirelessly via auto-discovered Bonjour services, or connect over a high-speed USB cable for maximum bandwidth and zero latency.
+- **Interface Type Detection**: Shows visual indicators (📶 Wi-Fi vs. 🔌 USB/Cable) in the host list, making it clear which interface is being utilized.
+- **Direct IP Connection (Wired Mode)**: Easily connect directly using the host's IP address (typically `172.20.10.2` when using iOS Personal Hotspot over USB) if automatic discovery is blocked.
+- **Host IP Display Panel**: The macOS Host application displays all active IPv4 network interface addresses, allowing quick and easy reference when configuring manual connections.
+- **Aspect-Ratio Fitting & Notch Prevention**: Automatically adds letterboxing/pillarboxing with proper safety margins (16pt left/right, 8pt top/bottom) to fit mobile screens perfectly without UI cutoffs from the iPhone notch, rounded corners, or Dynamic Island.
+- **Zero-Latency Touch Mapping**: Maps drag and click gestures on the iOS device back to macOS coordinates in real-time.
+- **Monotonic Presentation Timestamps**: Synchronizes video decode presentation timestamps (PTS) with `displayImmediately` flags to ensure stutter-free 60fps real-time rendering.
+- **One-Click Deploy Script**: Includes a local terminal script to build in Release mode and deploy the host application directly to `/Applications`.
 
 ---
 
-## 🏗️ System Architecture (시스템 구조)
+## 🏗️ System Architecture
 
 ```mermaid
-graph LR
-    Mac[macOS Host] -- "1. Virtual Screen" --> VD[Virtual Display]
-    VD -- "2. ScreenCaptureKit" --> Capturer[ScreenCapturer]
-    Capturer -- "3. VideoToolbox (H.264)" --> Encoder[VideoEncoder]
-    Encoder -- "4. TCP Network Socket" --> Client[iOS DisplayClient]
-    Client -- "5. VideoToolbox (H.264)" --> Decoder[VideoDecoder]
-    Decoder -- "6. DisplayLayer (PTS)" --> Render[AVSampleBufferDisplayLayer]
-    Render -- "7. Touch Input" --> Gesture[DragGesture]
-    Gesture -- "8. Touch Coordinates (TCP)" --> Mac
+graph TD
+    Mac[macOS Host] -->|1. Create Virtual Screen| VD[Virtual Display]
+    VD -->|2. Native Resolution Changes| SC[ScreenCaptureKit]
+    SC -->|3. Capture Frame Buffer| Encoder[VideoEncoder H.264]
+    Encoder -->|4. TCP Network Packet| Connection{Interface: Wi-Fi / USB}
+    Connection -->|5. Low-Latency Network Stream| Decoder[VideoDecoder H.264]
+    Decoder -->|6. Presentation Time Align| Render[AVSampleBufferDisplayLayer]
+    Render -->|7. Drag & Click Gestures| Gesture[iOS Touch Gesture]
+    Gesture -->|8. Normalized Coordinates| Mac
 ```
 
 ---
 
-## 🚀 How to Run (실행 및 연동 방법)
+## 🚀 How to Run
 
 ### 💻 macOS Host (`macOS-Host`)
-1. Download or compile `macOS-Host.app`. (배포용 앱 `macOS-Host.app`을 실행합니다.)
-2. Select your target resolution (e.g. `Game Mode 1024x768 - 4:3` or `iPhone 13/14 Pro - Optimized`). (원하는 보조 모니터 해상도 및 화면비를 선택합니다.)
-3. Click **Start Server** and **Create Display**. (서버 구동 및 디스플레이 생성을 활성화합니다.)
+
+#### Automatic Deployment (Recommended)
+You can easily build the Release version of the host and deploy it directly to your `/Applications` folder using the included deployment script:
+1. Open Terminal and navigate to the project directory.
+2. Run:
+   ```bash
+   ./deploy_mac.sh
+   ```
+3. Open `macOS-Host.app` from your Applications folder or Launchpad.
+4. Click **Start Server** and **Create Display**.
+5. *Optional*: Adjust the resolution, scale, or layout of the virtual display `WiFi-Extension` at any time under **macOS System Settings > Displays**.
 
 ### 📱 iOS Client (`iOS-Client`)
-1. Open the project in Xcode. (Xcode에서 `iOS-Client.xcodeproj`를 엽니다.)
-2. Connect your physical iPhone. (본인의 실기기 아이폰을 맥북에 연결합니다.)
-3. Change the Build Configuration to **Release** (Product > Scheme > Edit Scheme... > Run > Release) for maximum performance. (최상의 와이파이 프레임 속도를 위해 빌드 구성을 **Release**로 변경합니다.)
-4. Press **Cmd + R** to install the app. (Cmd + R을 눌러 아이폰에 앱을 영구 배포합니다.)
-5. Launch the app and select your Mac from the host list. (아이폰에서 앱을 켜고 자동으로 탐색된 맥북 호스트를 터치해 연결합니다!)
+
+1. Open `iOS-Client/iOS-Client/iOS-Client.xcodeproj` in Xcode.
+2. Connect your physical iPhone/iPad to your Mac.
+3. Select your device as the run destination.
+4. Set the Build Configuration to **Release** (*Product > Scheme > Edit Scheme... > Run > Build Configuration: Release*) to enable compiler optimizations and hardware acceleration.
+5. Press **Cmd + R** to compile and run the app.
+6. Choose your connection method:
+   - **Auto Discover**: Connect with a single tap to any automatically detected host (look for the 🔌 badge for USB wired connections).
+   - **Direct IP (USB / Wired)**: Turn on *Personal Hotspot* on your iPhone, connect the USB cable, find the Mac's IP listed in the host window, enter it (typically `172.20.10.2`), and click connect.
