@@ -23,10 +23,14 @@ jobs:
 
       - name: Build macOS Host
         run: |
+          # Compile the macOS host bypassing the code signing requirement on GHA runner
           xcodebuild -project macOS-Host/macOS-Host.xcodeproj \
                      -scheme macOS-Host \
                      -configuration Release \
                      -derivedDataPath build_mac \
+                     CODE_SIGNING_ALLOWED=NO \
+                     CODE_SIGNING_REQUIRED=NO \
+                     CODE_SIGN_IDENTITY="" \
                      -quiet
 
       - name: Package macOS Application
