@@ -1,4 +1,4 @@
-name: Build and Release macOS Host
+name: Build and Release macOS Host and iOS Client
 
 on:
   push:
@@ -24,19 +24,38 @@ jobs:
           xcodebuild -project macOS-Host/macOS-Host.xcodeproj \
                      -scheme macOS-Host \
                      -configuration Release \
-                     -derivedDataPath build \
+                     -derivedDataPath build_mac \
                      -quiet
 
-      - name: Package Application Bundle
+      - name: Package macOS Application
         run: |
-          # Package the standalone macOS-Host.app into a ZIP archive for distribution
-          cd build/Build/Products/Release
+          cd build_mac/Build/Products/Release
           zip -r ../../../../macOS-Host.zip macOS-Host.app
 
-      - name: Create GitHub Release and Upload Asset
+      - name: Build iOS Client (Unsigned IPA)
+        run: |
+          # Compile the iOS client as an unsigned archive (bypass signing code restriction)
+          xcodebuild -project iOS-Client/iOS-Client/iOS-Client.xcodeproj \
+                     -scheme iOS-Client \
+                     -sdk iphoneos \
+                     -configuration Release \
+                     -archivePath build_ios/iOS-Client.xcarchive \
+                     CODE_SIGNING_ALLOWED=NO \
+                     CODE_SIGNING_REQUIRED=NO \
+                     -quiet \
+                     clean archive
+          
+          # Package the .app into a standard Payload folder to create a valid .ipa file
+          mkdir -p Payload
+          cp -R build_ios/iOS-Client.xcarchive/Products/Applications/iOS-Client.app Payload/
+          zip -r iOS-Client.ipa Payload
+
+      - name: Create GitHub Release and Upload Assets
         uses: softprops/action-gh-release@v2
         with:
-          files: macOS-Host.zip
+          files: |
+            macOS-Host.zip
+            iOS-Client.ipa
           draft: false
           prerelease: false
           generate_release_notes: true
